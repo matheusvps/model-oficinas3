@@ -63,6 +63,14 @@ def save_image_uint8(image_tensor: tf.Tensor, out_path: Path):
     tf.io.write_file(str(out_path), encoded)
 
 
+def load_image_rgb(path: Path, img_size: int) -> tf.Tensor:
+    raw = tf.io.read_file(str(path))
+    img = tf.image.decode_image(raw, channels=3, expand_animations=False)
+    img = tf.image.resize(img, [img_size, img_size], method="bilinear")
+    img = tf.cast(img, tf.float32)
+    return img
+
+
 def augment_train_split(
     src_train_dir: Path, dst_train_dir: Path, copies_per_image: int, img_size: int
 ):
@@ -80,8 +88,7 @@ def augment_train_split(
         print(f"Classe: {class_dir.name} | originais: {len(image_files)}")
 
         for img_path in image_files:
-            img = keras.utils.load_img(img_path, target_size=(img_size, img_size))
-            arr = keras.utils.img_to_array(img)
+            arr = load_image_rgb(img_path, img_size)
 
             stem = img_path.stem
             for i in range(copies_per_image):
