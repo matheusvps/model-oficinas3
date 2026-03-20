@@ -19,18 +19,29 @@ pip install -r requirements.txt
 
 Se voce tiver apenas Python 3.14 instalado, instale o 3.11 e recrie o ambiente virtual.
 
-## 2) Treinar o modelo
+## 2) Data augmentation (script separado)
+
+Gera um novo dataset em disco (`dataset_aug/`) com:
+
+- `train`: imagens originais + imagens aumentadas
+- `val` e `test`: copiados sem alteracoes
+
+```bash
+python data_augmentation.py --input-dir dataset --output-dir dataset_aug --copies-per-image 2 --img-size 224
+```
+
+## 3) Treinar o modelo (script separado)
 
 Treino base:
 
 ```bash
-python train.py --data-dir dataset --epochs 20 --img-size 224 --batch-size 32
+python train.py --data-dir dataset_aug --epochs 20 --img-size 224 --batch-size 32
 ```
 
 Treino com fine-tuning parcial (geralmente melhora):
 
 ```bash
-python train.py --data-dir dataset --epochs 25 --img-size 224 --batch-size 32 --fine-tune
+python train.py --data-dir dataset_aug --epochs 25 --img-size 224 --batch-size 32 --fine-tune
 ```
 
 Arquivos gerados:
@@ -38,7 +49,7 @@ Arquivos gerados:
 - `artifacts/orange_model.keras`
 - `artifacts/labels.json`
 
-## 3) Rodar com webcam USB
+## 4) Rodar com webcam USB
 
 ### Opcao A: inferencia simples
 

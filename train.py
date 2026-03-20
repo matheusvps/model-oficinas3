@@ -1,12 +1,10 @@
 import argparse
 import json
-import os
 from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
 
 
 def parse_args():
@@ -40,19 +38,7 @@ def count_images_per_class(directory: Path, class_names):
 
 def build_model(num_classes: int, img_size: int):
     inputs = keras.Input(shape=(img_size, img_size, 3))
-
-    aug = keras.Sequential(
-        [
-            layers.RandomFlip("horizontal"),
-            layers.RandomRotation(0.08),
-            layers.RandomZoom(0.12),
-            layers.RandomContrast(0.12),
-        ],
-        name="augment",
-    )
-
-    x = aug(inputs)
-    x = tf.keras.applications.mobilenet_v2.preprocess_input(x)
+    x = tf.keras.applications.mobilenet_v2.preprocess_input(inputs)
 
     base = tf.keras.applications.MobileNetV2(
         input_shape=(img_size, img_size, 3), include_top=False, weights="imagenet"
