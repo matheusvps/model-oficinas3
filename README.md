@@ -71,6 +71,11 @@ Este script mostra:
 python webcam_live_classification.py --camera 0 --threshold 0.60
 ```
 
+Para rodar: 
+```bash
+python webcam_live_classification.py --threshold 0.55 --inconclusive-margin 0.10 --min-margin 0.04 --stable-frames 5 --healthy-bias 0.08 --min-healthy-conf 0.30
+```
+
 Se sua webcam USB nao estiver no indice `0`, tente `1` ou `2`:
 
 ```bash
