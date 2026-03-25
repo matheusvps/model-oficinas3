@@ -49,6 +49,27 @@ Arquivos gerados:
 - `artifacts/orange_model.keras`
 - `artifacts/labels.json`
 
+### Como o treinamento foi feito
+
+O script `train.py` usa **transfer learning** com `MobileNetV2` pretreinada em ImageNet para classificar 6 classes (`black_spot`, `canker`, `greening`, `healthy`, `rusttick`, `scab`).
+
+Fluxo aplicado no treinamento:
+
+1. Carrega os dados ja separados em `train/`, `val/` e `test/` com `image_dataset_from_directory`.
+2. Redimensiona as imagens para `--img-size` (padrao `224x224`) e monta batches (`--batch-size`, padrao `32`).
+3. Aplica o preprocessamento da MobileNetV2 (`mobilenet_v2.preprocess_input`).
+4. Usa a base MobileNetV2 sem o topo (`include_top=False`) + `GlobalAveragePooling2D` + `Dropout(0.3)` + camada final `Dense` com `softmax`.
+5. Na fase 1, treina com a base convolucional congelada (`base.trainable = False`).
+6. Calcula `class_weight` automaticamente a partir da distribuicao de imagens por classe para reduzir desbalanceamento.
+7. Treina com otimizador Adam (`--lr`, padrao `1e-4`), perda `sparse_categorical_crossentropy` e metrica `accuracy`.
+8. Usa callbacks:
+	- `EarlyStopping` monitorando `val_accuracy` (patience=5, restaura melhores pesos).
+	- `ReduceLROnPlateau` monitorando `val_loss` (fator 0.3, patience=2).
+9. Se `--fine-tune` estiver ativo, faz fase 2: descongela parte final da MobileNetV2 (ultimas ~40 camadas), reduz LR para `lr * 0.1` e treina por mais epocas.
+10. Ao final, avalia em `val` e `test`, salva o modelo em `artifacts/orange_model.keras` e os metadados/metricas em `artifacts/labels.json`.
+
+Observacao: o `labels.json` tambem gera um mapeamento binario (`healthy` vs `diseased`) para facilitar a classificacao final no uso com webcam.
+
 ## 4) Rodar com webcam USB
 
 ### Opcao A: inferencia simples
