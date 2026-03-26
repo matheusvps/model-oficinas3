@@ -235,6 +235,34 @@ Conceitos-chave:
 	- E a cabeca original de classificacao do modelo pretreinado (ImageNet, 1000 classes).
 	- Com `include_top=False`, removemos essa cabeca original para colocar uma cabeca nova adaptada ao problema atual (6 classes).
 
+Detalhamento pratico da etapa 4:
+
+- Fluxo interno da arquitetura neste projeto:
+	- entrada: tensor de imagem `(224, 224, 3)` (ou `img_size` configurado)
+	- preprocessamento MobileNetV2
+	- backbone gera mapas de caracteristicas espaciais (features de alto nivel)
+	- `GlobalAveragePooling2D` transforma mapas 2D em vetor 1D
+	- `Dropout(0.3)` desativa aleatoriamente parte dos neuronios durante treino
+	- `Dense + softmax` produz probabilidades para as 6 classes
+
+Por que `GlobalAveragePooling2D` em vez de `Flatten`?
+
+- `Flatten` aumenta muito o numero de parametros quando aplicado sobre mapas grandes.
+- `GlobalAveragePooling2D` reduz drasticamente parametros, melhora eficiencia e costuma generalizar melhor em transfer learning.
+- Em termos praticos, isso reduz risco de overfitting e custo computacional.
+
+Por que existe uma cabeca nova?
+
+- A cabeca original da ImageNet foi treinada para 1000 classes genericas.
+- O problema atual tem 6 classes especificas de doencas/saude citrica.
+- A cabeca customizada aprende fronteiras de decisao do dominio alvo sem precisar retreinar a rede inteira desde o inicio.
+
+Intuicao do `softmax` na saida:
+
+- Converte os logits em probabilidades somando 1.
+- Facilita interpretar previsao como confianca relativa entre classes.
+- Exemplo: `[0.05, 0.10, 0.70, 0.05, 0.05, 0.05]` indica classe 3 como mais provavel.
+
 #### Etapa 5: fase 1 com backbone congelado
 
 - `base.trainable = False` impede atualizar pesos da MobileNetV2 no inicio.
@@ -243,6 +271,32 @@ Conceitos-chave:
 	- convergencia mais estavel
 	- menor risco de overfitting rapido
 	- aproveitamento seguro do conhecimento do pretreino
+
+Detalhamento pratico da etapa 5:
+
+- "Congelar" significa manter os pesos do backbone fixos durante backpropagation.
+- Na pratica:
+  - gradiente ainda passa para calcular erro global
+  - atualizacao de pesos acontece apenas na cabeca final
+- Isso transforma a fase 1 em um treinamento de "classificador sobre features" ja aprendidas.
+
+Por que essa estrategia funciona bem?
+
+- O backbone pretreinado ja reconhece padroes visuais uteis (bordas, texturas, formas).
+- O dataset do projeto e menor que ImageNet, entao comecar atualizando tudo pode superajustar muito cedo.
+- Treinar primeiro so a cabeca reduz variancia e prepara uma base mais estavel para fine-tuning posterior.
+
+Relacao com `base(x, training=False)` no codigo:
+
+- Mantem o backbone em modo inferencia nesta fase.
+- Isso evita comportamento instavel de camadas de normalizacao interna durante o treino inicial da cabeca.
+- Resultado esperado: aprendizado mais previsivel nas primeiras epocas.
+
+Sinal de que a etapa 5 foi bem executada:
+
+- `val_accuracy` sobe de forma progressiva sem oscilacoes extremas.
+- `val_loss` tende a cair ou estabilizar antes do plateau.
+- A partir desse ponto, o fine-tuning (etapa 9) tende a render ganhos mais consistentes.
 
 #### Etapa 6: balanceamento com `class_weight`
 
