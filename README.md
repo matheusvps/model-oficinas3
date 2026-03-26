@@ -298,6 +298,69 @@ Sinal de que a etapa 5 foi bem executada:
 - `val_loss` tende a cair ou estabilizar antes do plateau.
 - A partir desse ponto, o fine-tuning (etapa 9) tende a render ganhos mais consistentes.
 
+### Conceitos fundamentais: backbone, top e modelo pretreinado
+
+#### O que e um modelo pretreinado?
+
+- E um modelo ja treinado previamente em um dataset muito grande (ex.: ImageNet).
+- Em vez de iniciar pesos aleatorios, voce parte de pesos que ja aprenderam padroes visuais gerais.
+- Isso reduz tempo de treino e melhora resultado quando o dataset novo e menor.
+
+Analogia simples:
+
+- Treino do zero: ensinar uma pessoa a ler e depois diagnosticar imagens.
+- Pretreino + ajuste: pegar um especialista em visao e ensinar apenas o dominio de citros.
+
+#### O que e backbone?
+
+- Backbone e o "corpo" da rede que extrai caracteristicas da imagem.
+- Ele transforma pixels crus em representacoes cada vez mais semanticas:
+	- camadas iniciais: bordas e contrastes
+	- camadas intermediarias: texturas e padroes locais
+	- camadas profundas: estruturas mais complexas relevantes para classificacao
+
+No projeto:
+- O backbone e a `MobileNetV2`.
+- Ele recebe imagem preprocessada e devolve mapas de caracteristicas para a cabeca final classificar.
+
+#### O que e top?
+
+- Top e a cabeca de classificacao original do modelo pretreinado.
+- No caso da MobileNetV2 pretreinada em ImageNet, esse top foi treinado para 1000 classes genericas.
+- Com `include_top=False`, esse top e removido.
+- Em seguida, adicionamos um top novo especifico do projeto (`Dense` com 6 saidas).
+
+Resumo da ideia:
+
+- backbone: reaproveita conhecimento visual geral
+- top novo: aprende o problema especifico do dataset atual
+
+#### Como funciona o treinamento com um novo dataset (transfer learning)
+
+Fluxo pratico usado neste projeto:
+
+1. Carrega o backbone pretreinado (`weights="imagenet"`).
+2. Remove o top antigo (`include_top=False`).
+3. Adiciona nova cabeca para o numero de classes local.
+4. Fase 1: congela backbone e treina so cabeca.
+5. Fase 2 (opcional): descongela parte final do backbone e refina com LR menor.
+
+Por que em duas fases?
+
+- Fase 1 aprende rapidamente fronteiras de classe sem destruir conhecimento geral do backbone.
+- Fase 2 adapta features profundas ao dominio citrico com atualizacoes mais suaves.
+
+Quando essa estrategia e melhor que treinar do zero?
+
+- Quase sempre que o dataset e pequeno/medio.
+- Quando o problema visual tem alguma similaridade com objetos naturais (caso de frutos e folhas).
+- Quando ha limite de tempo/compute para treino.
+
+Quando considerar treino do zero?
+
+- Dataset muito grande e diverso no proprio dominio alvo.
+- Dominio visual extremamente diferente do pretreino, com pouco ganho de transferencia.
+
 #### Etapa 6: balanceamento com `class_weight`
 
 - Em datasets reais, algumas classes costumam ter menos imagens.
