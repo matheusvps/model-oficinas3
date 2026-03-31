@@ -7,12 +7,50 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+from data_augmentation import generate_augmented_dataset
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Treina classificador de doenças em laranja (multiclasse)."
     )
-    parser.add_argument("--data-dir", type=str, default="dataset", help="Pasta com train/val/test.")
+    parser.add_argument(
+        "--dataset-name",
+        type=str,
+        default="dataset",
+        choices=["dataset", "dataset2"],
+        help="Escolha do dataset base: dataset ou dataset2.",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=str,
+        default=None,
+        help="Pasta do dataset base (sobrescreve --dataset-name).",
+    )
+    parser.add_argument(
+        "--aug-output-dir",
+        type=str,
+        default="dataset_aug",
+        help="Pasta de saída do dataset aumentado usado no treino.",
+    )
+    parser.add_argument(
+        "--copies-per-image",
+        type=int,
+        default=2,
+        help="Quantidade de cópias aumentadas por imagem de treino.",
+    )
+    parser.add_argument(
+        "--val-ratio",
+        type=float,
+        default=0.15,
+        help="Fracao para validacao se o dataset nao vier dividido.",
+    )
+    parser.add_argument(
+        "--test-ratio",
+        type=float,
+        default=0.15,
+        help="Fracao para teste se o dataset nao vier dividido.",
+    )
     parser.add_argument("--img-size", type=int, default=224, help="Tamanho da imagem quadrada.")
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size.")
     parser.add_argument("--epochs", type=int, default=20, help="Número de épocas.")
@@ -73,7 +111,22 @@ def main():
     tf.random.set_seed(42)
     np.random.seed(42)
 
-    data_dir = Path(args.data_dir)
+    data_dir = Path(args.data_dir) if args.data_dir else Path(args.dataset_name)
+    aug_data_dir = Path(args.aug_output_dir)
+
+    print(f"Dataset selecionado: {data_dir}")
+    print("Gerando dataset aumentado para treino...")
+    generated = generate_augmented_dataset(
+        input_dir=data_dir,
+        output_dir=aug_data_dir,
+        copies_per_image=args.copies_per_image,
+        img_size=args.img_size,
+        val_ratio=args.val_ratio,
+        test_ratio=args.test_ratio,
+    )
+    print(f"Imagens aumentadas geradas: {generated}")
+
+    data_dir = aug_data_dir
     train_dir = data_dir / "train"
     val_dir = data_dir / "val"
     test_dir = data_dir / "test"

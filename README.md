@@ -21,6 +21,41 @@ Pre-requisito importante:
 
 - use `Python 3.10`, `3.11` ou `3.12` (TensorFlow nao suporta Python 3.14 no momento)
 
+### Windows (recomendado)
+
+Verifique as versoes instaladas:
+
+```powershell
+py -0p
+```
+
+Crie o ambiente com Python 3.12:
+
+```powershell
+py -3.12 -m venv .venv
+```
+
+Ative e instale dependencias:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+pip install -r requirements.txt
+```
+
+Se o PowerShell bloquear a ativacao do script, execute:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+Opcional (sem ativar o ambiente):
+
+```powershell
+.\.venv\Scripts\python.exe train.py
+```
+
 Exemplo com Python 3.11:
 
 ```bash
@@ -32,7 +67,7 @@ pip install -r requirements.txt
 
 Se voce tiver apenas Python 3.14 instalado, instale o 3.11 e recrie o ambiente virtual.
 
-## 2) Data augmentation (script separado)
+## 2) Data augmentation (opcional, script separado)
 
 Gera um novo dataset em disco (`dataset_aug/`) com:
 
@@ -43,19 +78,34 @@ Gera um novo dataset em disco (`dataset_aug/`) com:
 python data_augmentation.py --input-dir dataset --output-dir dataset_aug --copies-per-image 2 --img-size 224
 ```
 
-## 3) Treinar o modelo (script separado)
+Observacao: agora o `train.py` ja executa essa etapa automaticamente antes de treinar.
+
+## 3) Treinar o modelo (com augmentation em sequencia)
 
 Treino base:
 
 ```bash
-python train.py --data-dir dataset_aug --epochs 20 --img-size 224 --batch-size 32
+python train.py --dataset-name dataset --epochs 20 --img-size 224 --batch-size 32
+```
+
+Treino usando `dataset2` (o script cria split automaticamente e depois aumenta `train`):
+
+```bash
+python train.py --dataset-name dataset2 --epochs 20 --img-size 224 --batch-size 32
 ```
 
 Treino com fine-tuning parcial (geralmente melhora):
 
 ```bash
-python train.py --data-dir dataset_aug --epochs 25 --img-size 224 --batch-size 32 --fine-tune
+python train.py --dataset-name dataset --epochs 25 --img-size 224 --batch-size 32 --fine-tune
 ```
+
+Parametros uteis:
+
+- `--data-dir`: sobrescreve o dataset base (se preferir um caminho customizado).
+- `--aug-output-dir`: define onde salvar o dataset aumentado (padrao: `dataset_aug`).
+- `--copies-per-image`: quantidade de imagens aumentadas por imagem de treino.
+- `--val-ratio` e `--test-ratio`: usados quando o dataset nao tem `train/val/test`.
 
 Arquivos gerados:
 
